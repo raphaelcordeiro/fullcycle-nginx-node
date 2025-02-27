@@ -1,0 +1,50 @@
+version: '3'
+
+services:
+  nginx:
+   container_name: proxy-reverse
+   image: raphaelcordeiroph/nginx:latest
+   restart: always
+   build:
+     context: nginx
+   ports:
+     - "8080:80"
+   depends_on:
+     - node
+   #entrypoint: dockerize -wait tcp://node:3000 -timeout 60s docker-entrypoint.sh
+   networks:
+     - nodeapp
+
+  mysql:
+    image: mysql:9.1.0
+    container_name: mysql
+    command: --innodb-use-native-aio=0
+    restart: always
+    tty: true
+    networks:
+      - nodeapp
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./schema:/docker-entrypoint-initdb.d
+    environment:
+      #variável de ambiente para definir o nome do banco de dados a ser criado
+      - MYSQL_DATABASE=nodedb
+      - MYSQL_ROOT_PASSWORD=testdb
+
+  node:
+    container_name: node
+    image: raphaelcordeiroph/node-app:latest
+    restart: always
+    build:
+      context: node/
+    tty: true
+    depends_on:
+      - mysql
+    networks:
+      - nodeapp
+
+networks:
+  nodeapp:
+    driver: bridge
+volumes:
+  db_data:
